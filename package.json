@@ -1,14 +1,53 @@
 {
   "name": "vite-plugin-openobserve-sourcemap",
-  "module": "index.ts",
+  "version": "1.0.0",
+  "description": "Vite plugin that uploads source maps to OpenObserve RUM after build and removes them from the output directory",
   "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest",
-    "glob": "^13.0.6",
-    "vite": "^8.0.14"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "sourcemap",
+    "source-map",
+    "openobserve",
+    "rum",
+    "error-tracking"
+  ],
+  "author": {
+    "name": "mrwan2546",
+    "url": "https://github.com/sirilerklab"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sirilerklab/vite-plugin-openobserve-sourcemap.git"
+  },
+  "homepage": "https://github.com/sirilerklab/vite-plugin-openobserve-sourcemap#readme",
+  "bugs": {
+    "url": "https://github.com/sirilerklab/vite-plugin-openobserve-sourcemap/issues"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": ">=5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vite": "^8.0.14"
   }
 }

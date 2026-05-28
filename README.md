@@ -11,10 +11,15 @@ A Vite plugin that automatically uploads source maps to [OpenObserve RUM](https:
 
 ## Installation
 
-Copy `index.ts` into your project (e.g. `plugins/vite-plugin-openobserve-sourcemap.ts`) and import it from your Vite config.
-
 ```bash
-bun install
+# npm
+npm install -D vite-plugin-openobserve-sourcemap
+
+# bun
+bun add -d vite-plugin-openobserve-sourcemap
+
+# pnpm
+pnpm add -D vite-plugin-openobserve-sourcemap
 ```
 
 ## Usage
