@@ -27,7 +27,7 @@ pnpm add -D vite-plugin-openobserve-sourcemap
 ### Nuxt / app.config.ts
 
 ```ts
-import { openObserveSourceMapPlugin } from './plugins/vite-plugin-openobserve-sourcemap'
+import { openObserveSourceMapPlugin } from 'vite-plugin-openobserve-sourcemap'
 
 export default defineConfig({
   vite: {
@@ -41,7 +41,7 @@ export default defineConfig({
 
 ```ts
 import { defineConfig } from 'vite'
-import { openObserveSourceMapPlugin } from './plugins/vite-plugin-openobserve-sourcemap'
+import { openObserveSourceMapPlugin } from 'vite-plugin-openobserve-sourcemap'
 
 export default defineConfig({
   plugins: [openObserveSourceMapPlugin()],
