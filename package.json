@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-openobserve-sourcemap",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vite plugin that uploads source maps to OpenObserve RUM after build and removes them from the output directory",
   "type": "module",
   "exports": {
