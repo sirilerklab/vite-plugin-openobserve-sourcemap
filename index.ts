@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { zipSync } from 'fflate'
 import { type Plugin } from 'vite'
 
 interface OpenObserveSourceMapOptions {
@@ -27,7 +28,7 @@ interface OpenObserveSourceMapOptions {
  *
  * Usage in app.config.ts:
  *
- *   import { openObserveSourceMapPlugin } from './plugins/vite-plugin-openobserve-sourcemap'
+ *   import { openObserveSourceMapPlugin } from 'vite-plugin-openobserve-sourcemap'
  *
  *   export default defineConfig({
  *     vite: {
@@ -76,58 +77,67 @@ export function openObserveSourceMapPlugin(opts: OpenObserveSourceMapOptions = {
         return
       }
 
-      // ── Upload ───────────────────────────────────────────────────
-      const auth = Buffer.from(`${email}:${password}`).toString('base64')
-      const uploadUrl = `${domain}/api/${org}/rum/v1/sourcemaps`
-
-      console.log(`\n🚀 [OpenObserve] Uploading ${mapFiles.length} sourcemap(s) to ${uploadUrl}`)
-
-      let success = 0
-      let failed  = 0
+      // ── Zip all .map files ───────────────────────────────────────
+      const zipEntries: Record<string, Uint8Array> = {}
 
       for (const filePath of mapFiles) {
-        const fileName = path.basename(filePath)
-        // Derive the public bundle path from the file location
-        const relativePath = filePath.replace(outputDir, '').replace(/\\/g, '/')
-
-        try {
-          const fileBuffer = fs.readFileSync(filePath)
-          const formData   = new FormData()
-
-          formData.append('file',            new Blob([fileBuffer], { type: 'application/json' }), fileName)
-          formData.append('version',         version)
-          formData.append('service',         service)
-          formData.append('env',             process.env.NODE_ENV ?? 'production')
-          formData.append('bundle_filepath', relativePath)
-
-          const res = await fetch(uploadUrl, {
-            method:  'POST',
-            headers: { Authorization: `Basic ${auth}` },
-            body:    formData,
-          })
-
-          if (res.ok) {
-            console.log(`   ✅ ${fileName}`)
-            success++
-
-            if (deleteAfterUpload) {
-              fs.unlinkSync(filePath)
-              console.log(`   🗑️  Deleted local: ${fileName}`)
-            }
-          } else {
-            const body = await res.text()
-            console.error(`   ❌ ${fileName} — HTTP ${res.status}: ${body}`)
-            failed++
-          }
-        } catch (err) {
-          console.error(`   ❌ ${fileName} — Error:`, err)
-          failed++
-        }
+        const entryName = filePath
+          .slice(outputDir.length)
+          .replace(/\\/g, '/')
+          .replace(/^\//, '')
+        zipEntries[entryName] = new Uint8Array(fs.readFileSync(filePath))
       }
 
-      console.log(
-        `\n🏁 [OpenObserve] Done — ${success} uploaded, ${failed} failed\n`
-      )
+      const zipBuffer = zipSync(zipEntries)
+      const zipKB     = (zipBuffer.length / 1024).toFixed(1)
+
+      // OpenObserve hard limit: 5MB (SOURCEMAP_FILE_MAX_SIZE = 1024 * 1024 * 5)
+      const MAX_SIZE = 5 * 1024 * 1024
+      if (zipBuffer.length > MAX_SIZE) {
+        console.error(`\n❌ [OpenObserve] ZIP size (${zipKB}KB) exceeds OpenObserve 5MB limit — upload skipped`)
+        console.warn(`   💡 Try enabling code splitting or reducing bundle size to shrink sourcemaps`)
+        return
+      }
+
+      // ── Upload ───────────────────────────────────────────────────
+      const auth      = Buffer.from(`${email}:${password}`).toString('base64')
+      const uploadUrl = `${domain}/api/${org}/sourcemaps`
+
+      console.log(`\n🚀 [OpenObserve] Uploading ${mapFiles.length} sourcemap(s) as single ZIP (${zipKB}KB) to ${uploadUrl}`)
+
+      try {
+        const formData = new FormData()
+        formData.append('file',    new Blob([zipBuffer], { type: 'application/zip' }), 'sourcemaps.zip')
+        formData.append('version', version)
+        formData.append('service', service)
+        formData.append('env',     process.env.NODE_ENV ?? 'production')
+
+        const res = await fetch(uploadUrl, {
+          method:  'POST',
+          headers: { Authorization: `Basic ${auth}` },
+          body:    formData,
+        })
+
+        if (res.ok) {
+          console.log(`   ✅ sourcemaps.zip (${mapFiles.length} files, ${zipKB}KB)`)
+
+          if (deleteAfterUpload) {
+            for (const filePath of mapFiles) {
+              fs.unlinkSync(filePath)
+            }
+            console.log(`   🗑️  Deleted ${mapFiles.length} local .map file(s)`)
+          }
+
+          console.log(`\n🏁 [OpenObserve] Done\n`)
+        } else {
+          const body = await res.text()
+          console.error(`   ❌ Upload failed — HTTP ${res.status}: ${body}`)
+          console.log(`\n🏁 [OpenObserve] Done — upload failed\n`)
+        }
+      } catch (err) {
+        console.error(`   ❌ Upload error:`, err)
+        console.log(`\n🏁 [OpenObserve] Done — upload failed\n`)
+      }
     },
   }
 }
